@@ -42,7 +42,7 @@ module alu (
             4'b1110: result = A << 1;
             4'b0111: result = A >> 1;
             
-            default: result = 8'b00000000;
+            default: result = 8'bz;
         endcase
     end
 endmodule
