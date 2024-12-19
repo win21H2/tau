@@ -10,6 +10,11 @@ module top_tb;
     wire [7:0] out;
     wire clk;
 
+	reg [7:0] A, B;
+    reg [3:0] opcode;
+    wire [7:0] result;
+    wire carry_out;
+
     clock clk_inst (
         .reset(reset),
         .clk_enable(clk_enable),
@@ -26,55 +31,55 @@ module top_tb;
         .out(out)
     );
 
+	alu u0 (
+        .A(A),
+        .B(B),
+        .opcode(opcode),
+        .result(result),
+        .carry_out(carry_out)
+    );
+
     initial begin
+		// SAMPLE ADDITION OF TWO STORED VALUES
         reset = 1;
         clk_enable = 0;
         lsi_enable = 0;
+
         we = 0;
         re = 0;
-        addr = 12'b000000000000;
-        in = 8'b00000000;
 
-        #10
+        #1
 		reset = 0;
         
         #10
 		clk_enable = 1;
 
-		// WRITE
-        we = 1; re = 0; addr = 12'b000000000000; in = 8'hAA; // AA to mem0[0]
+
+        we = 1;
+		re = 0;
+
+		addr = 12'b000000000000; in = 8'b00000001;
         #10
 
-        addr = 12'b000000000001; in = 8'hBB; // BB to mem0[1]
+		addr = 12'b100000000000; in = 8'b00000010;
         #10
 
-        addr = 12'b010000000000; in = 8'hCC; // CC to mem1[0]
-        #10
-
-        addr = 12'b100000000001; in = 8'hDD; // DD to mem2[1]
-        #10
-
-        addr = 12'b110000000010; in = 8'hEE; // EE to mem3[2]
-        #10
 
         we = 0;
 		re = 1;
 
-		// READ
-        addr = 12'b000000000000; // mem0[0]
+        addr = 12'b000000000000;
         #10
-        
-        addr = 12'b000000000001; // mem0[1]
-        #10
+		A = out;
+		#10
 
-        addr = 12'b010000000000; // mem1[0]
+		addr = 12'b100000000000;
         #10
+		B = out;
+		#10
 
-        addr = 12'b100000000001; // mem2[1]
-        #10
-
-        addr = 12'b110000000010; // mem3[2]
-        #10
+		opcode = 4'b0000;
+		#10
 
         $finish;
     end

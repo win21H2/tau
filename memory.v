@@ -12,7 +12,7 @@ module memory (
     input wire clk,
     input wire we,
     input wire re,
-    input wire [11:0] addr, // 12-bit address input (10-bit address pointer and 2-bit block selector)
+    input wire [11:0] addr, // 12-bit address input (10-bit address pointer and 2-bit block selector at MSBs)
     input wire [7:0] in,
     output reg [7:0] out
 );
