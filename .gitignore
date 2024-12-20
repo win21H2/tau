@@ -9,3 +9,8 @@
 /clock.v.bak
 /clock_tb.v.bak
 /top_tb.v.bak
+/program_counter_tb.v.bak
+/program_counter.v.bak
+/inst_reg.v.bak
+/control_unit.v.bak
+/flash.v.bak

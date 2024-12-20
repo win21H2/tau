@@ -1,14 +1,9 @@
-/*
-SYS CLOCK
-*/
-
 module clock_tb;
     reg reset;
     reg clk_enable;
     reg lsi_enable;
     
     wire clk;
-    wire pll_clk;
     wire lsi_clk;
     wire wdt_clk;
 
@@ -17,7 +12,6 @@ module clock_tb;
         .clk_enable(clk_enable),
         .lsi_enable(lsi_enable),
         .clk(clk),
-        .pll_clk(pll_clk),
         .lsi_clk(lsi_clk),
         .wdt_clk(wdt_clk)
     );

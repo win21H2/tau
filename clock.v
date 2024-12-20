@@ -1,20 +1,14 @@
-/*
-SYS CLOCK
-*/
-
 module clock (
     input wire reset,
     input wire clk_enable,
     input wire lsi_enable,
     output reg clk,
-    output reg pll_clk,
     output reg lsi_clk,
     output reg wdt_clk
 );
 
     initial begin
-        clk = 0; 
-        pll_clk = 0;
+        clk = 0;
         lsi_clk = 0;
         wdt_clk = 0;
     end
@@ -34,11 +28,6 @@ module clock (
 		else begin
             clk = 0;
         end
-    end
-
-    // phased-lock loop output generation (frequency multiplier)
-    always @(posedge clk) begin
-        pll_clk <= ~pll_clk;
     end
 
     // low-speed internal oscillator (low-power clock source for sleep mode)
