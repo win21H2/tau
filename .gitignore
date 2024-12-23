@@ -15,3 +15,4 @@
 /control_unit.v.bak
 /flash.v.bak
 /instruction_load_tb.v.bak
+/load_tb.v.bak
