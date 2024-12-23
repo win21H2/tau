@@ -19,7 +19,7 @@ module control_unit (
     always @(*) begin
         case(opcode)
             4'b0000: begin // load
-                alu_op = opcode;
+                alu_op = 4'b0110;
                 pc_load = 1'b0;
                 ir_load = 1'b1;
                 mem_read = 1'b1;
@@ -27,7 +27,7 @@ module control_unit (
                 reg_write = 1'b1;
             end
             4'b1111: begin // store
-                alu_op = opcode;
+                alu_op = 4'b0110;
                 pc_load = 1'b0;
                 ir_load = 1'b1;
                 mem_read = 1'b0;
@@ -35,12 +35,12 @@ module control_unit (
                 reg_write = 1'b0;
             end
             default: begin
-                alu_op = opcode;
-                pc_load = 1'b0;
-                ir_load = 1'b1;
-                mem_read = 1'b0;
-                mem_write = 1'b0;
-                reg_write = 1'b0;
+                alu_op = 4'bz;
+                pc_load = 1'bz;
+                ir_load = 1'bz;
+                mem_read = 1'bz;
+                mem_write = 1'bz;
+                reg_write = 1'bz;
             end
         endcase
     end

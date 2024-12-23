@@ -2,8 +2,8 @@ module program_counter (
     input wire clk,
     input wire reset,
     input wire [1:0] pc_control, // 00: hold, 01: increment, 10: branch, 11: jump
-    input wire [15:0] branch_address,
-    input wire [15:0] jump_address,
+    input wire [15:0] branch_addr,
+    input wire [15:0] jump_addr,
     output reg [15:0] pc_out
 );
 
@@ -15,8 +15,8 @@ module program_counter (
             case (pc_control)
                 2'b00: pc_out <= pc_out; // hold
                 2'b01: pc_out <= pc_out + 1; // increment
-                2'b10: pc_out <= branch_address; // branch
-                2'b11: pc_out <= jump_address; // jump
+                2'b10: pc_out <= branch_addr; // branch
+                2'b11: pc_out <= jump_addr; // jump
             endcase
         end
     end

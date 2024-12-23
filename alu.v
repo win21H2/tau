@@ -16,6 +16,9 @@ LOGIC
 SHIFTS
 [OP 1110] - SL
 [OP 0111] - SR
+
+NO OPERATION
+[OP 0110] - NO OPERATION
 */
 
 module alu (

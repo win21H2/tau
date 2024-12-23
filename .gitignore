@@ -14,3 +14,4 @@
 /inst_reg.v.bak
 /control_unit.v.bak
 /flash.v.bak
+/instruction_load_tb.v.bak

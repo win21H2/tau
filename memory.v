@@ -20,7 +20,7 @@ module memory (
     reg [7:0] mem1 [0:1023];
     reg [7:0] mem2 [0:1023];
     reg [7:0] mem3 [0:1023];
-    
+
     always @(posedge clk) begin
         // WRITE
         if (we) begin     
