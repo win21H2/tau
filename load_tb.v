@@ -78,24 +78,24 @@ module load_tb;
         reset = 0;
         clk_enable = 1;
         
-        // WRITE INST TO FLASH [BIG ENDIAN]
+        // WRITE INST TO FLASH [LITTLE ENDIAN]
         @(posedge clk);
         we = 1;
         re = 0;
         addr = 24'h000000;
-        in = 8'h00;
+        in = 8'h93;
         
         @(posedge clk);
         addr = 24'h000001;
-        in = 8'hA1;
-        
-        @(posedge clk);
-        addr = 24'h000002;
         in = 8'h00;
         
         @(posedge clk);
+        addr = 24'h000002;
+        in = 8'hA1;
+        
+        @(posedge clk);
         addr = 24'h000003;
-        in = 8'h93;
+        in = 8'h00;
         
         @(posedge clk);
         we = 0;
@@ -103,35 +103,47 @@ module load_tb;
         addr = 24'bx;
         in = 8'bx;
 
-        // READ INST FROM FLASH [BIG ENDIAN]
+        // READ INST FROM FLASH [LITTLE ENDIAN]
         @(posedge clk);
         re = 1;
-        addr = 24'h000000;
+        addr = pc_out;
         pc_control = 2'b00;
 
         repeat(3) @(posedge clk);
-        instruction[31:24] = out;
+        instruction[7:0] = out;
 
         @(posedge clk);
-        addr = 24'h000001;
+        pc_control = 2'b01;
+        @(posedge clk);
         pc_control = 2'b00;
-
-        repeat(3) @(posedge clk);
-        instruction[23:16] = out;
 
         @(posedge clk);
-        addr = 24'h000002;
-        pc_control = 2'b00;
+        addr = pc_out;
 
         repeat(3) @(posedge clk);
         instruction[15:8] = out;
 
         @(posedge clk);
-        addr = 24'h000003;
+        pc_control = 2'b01;
+        @(posedge clk);
         pc_control = 2'b00;
 
+        @(posedge clk);
+        addr = pc_out;
+
         repeat(3) @(posedge clk);
-        instruction[7:0] = out;
+        instruction[23:16] = out;
+
+        @(posedge clk);
+        pc_control = 2'b01;
+        @(posedge clk);
+        pc_control = 2'b00;
+
+        @(posedge clk);
+        addr = pc_out;
+
+        repeat(3) @(posedge clk);
+        instruction[31:24] = out;
 
         @(posedge clk);
         re = 0;
