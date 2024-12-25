@@ -77,8 +77,5 @@ module flash (
                 4'b1111: out <= mem15[addr[19:0]];
             endcase
         end
-        else begin
-            out <= 8'bz;
-        end
     end
 endmodule

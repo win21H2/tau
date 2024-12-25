@@ -1,4 +1,5 @@
 module load_tb;
+	// CLK
 	reg reset;
     reg clk_enable;
     reg lsi_enable;
@@ -6,12 +7,21 @@ module load_tb;
     wire lsi_clk;
     wire wdt_clk;
 
+	// FLASH
 	reg we;
     reg re;
     reg [23:0] addr;
     reg [7:0] in;
     wire [7:0] out;
 
+	// PC
+	reg [1:0] pc_control;
+	reg [15:0] branch_addr;
+	reg [15:0] jump_addr;
+	wire [15:0] pc_out;
+	reg [31:0] instruction;
+
+	// CU
 	reg [3:0] opcode;
 	wire [3:0] alu_op;
 	wire pc_load;
@@ -20,13 +30,7 @@ module load_tb;
 	wire mem_write;
 	wire reg_write;
 	
-	reg [1:0] pc_control;
-	reg [15:0] branch_addr;
-	reg [15:0] jump_addr;
-	wire [15:0] pc_out;
-	reg [31:0] instruction;
-	
-    clock clk_inst (
+	clock clk_inst (
         .reset(reset),
         .clk_enable(clk_enable),
         .lsi_enable(lsi_enable),
@@ -36,12 +40,21 @@ module load_tb;
     );
 
 	flash flash_inst (
+        .clk(clk),
+        .we(we),
+        .re(re),
+        .addr(addr),
+        .in(in),
+        .out(out)
+    );
+ 
+	program_counter pc_inst (
 		.clk(clk),
-		.we(we),
-		.re(re),
-		.addr(addr),
-		.in(in),
-		.out(out)
+		.reset(reset),
+		.pc_control(pc_control),
+		.branch_addr(branch_addr),
+		.jump_addr(jump_addr),
+		.pc_out(pc_out)
 	);
 
 	control_unit cu_inst (
@@ -54,33 +67,19 @@ module load_tb;
 		.reg_write(reg_write)
 	);
 
-	program_counter pc_inst (
-		.clk(clk),
-		.reset(reset),
-		.pc_control(pc_control),
-		.branch_addr(branch_addr),
-		.jump_addr(jump_addr),
-		.pc_out(pc_out)
-	);
-
 	initial begin
-	    reset = 1;
-		clk_enable = 0;
-	    lsi_enable = 0;
-	    addr = 24'bz;
-	    in = 8'bz;
-		opcode = 4'bz;
-		pc_control = 2'bz;
-		branch_addr = 16'bz;
-		jump_addr = 16'bz;
-	    we = 0;
-	    re = 0;
-	
-	    #1
-	    reset = 0;
+        reset = 1;
+        clk_enable = 0;
+        lsi_enable = 0;
+		we = 0;
+		re = 0;
+		#1
+		reset = 0;
 		clk_enable = 1;
-	    
-	    // WRITE INSTRUCTION TO FLASH
+
+		// 00: hold, 01: increment, 10: branch, 11: jump (PC)
+		
+		// WRITE INST TO FLASH
 	    @(posedge clk);
 	    we = 1;
 	    re = 0;
@@ -100,26 +99,34 @@ module load_tb;
 	    in = 8'h00;
 	    
 	    @(posedge clk);
-	    // CLEAR AFTER PRE-SETUP
 	    we = 0;
 	    re = 0;
-	    addr = 24'bz;
-	    in = 8'bz;
-	    
-	    #100
+		addr = 24'bx;
+		in = 8'bx;
+		// WRITE INST TO FLASH
 
+		#50
 		pc_control = 2'b01;
 
-		repeat(5) begin
+		@(posedge clk);
+		re = 1;
+		addr = 24'h000000;
+		instruction = {instruction[23:0], out};
+		
+		@(posedge clk);
+		re = 1;
+		addr = 24'h000001;
+		instruction = {instruction[23:0], out};
+
+		@(posedge clk);
+		re = 1;
+		addr = 24'h000002;
+		instruction = {instruction[23:0], out};
 			@(posedge clk);
-			re = 1;
-			addr = {8'b0, pc_out};
+		re = 1;
+		addr = 24'h000003;
+		instruction = {instruction[23:0], out}; // figure out how to get readouts per clock cycle (right now, data out from mem is buffered to the next clock cycle)
 
-			repeat (4) @(posedge clk);
-			instruction = {instruction[23:0], out}; // figure out which way data is shifted (big or little endian) from above
-		end
-
-		#10
-	    $finish;
-	end
+	$finish;
+end
 endmodule

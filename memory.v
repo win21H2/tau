@@ -41,8 +41,5 @@ module memory (
                 2'b11: out <= mem3[addr[9:0]];
             endcase
         end
-		else begin
-            out <= 8'bz;
-        end
     end
 endmodule
