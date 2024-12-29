@@ -1,79 +1,59 @@
 /*
-~~~ Example instruction ~~~
-addi x1, x2, 10
-Add constant "10" [00001010] to the contents of x2 at address [00010000 00000000 00000001] (using ALU opcode [0000]) and store to register x1 at address [00010000 00000000 00000010]
-[0000]-[00010000 00000000 00000010]-[00010000 00000000 00000001]-[00001010]
-[ALU add operation]-[register x1]-[register x2]-[constant "10"]
+INST:
+	addi x4, x5, 10 (add const of 10 to x5 and store to x4)
 
-Instruction is held starting from [000100000000000000000001]
+HEX:
+     0x00a28213
 
-~~~ PC (program counter) ~~~
-Holds address of next instruction to execute (can either increment, jump to, or halt at an instruction)
+BINARY:
+     0000 0000 1010 0010 1000 0010 0001 0011
 
-~~~ CU (control unit) ~~~
-Orchestreates all operations (such as when memory should be read/written) using an opcode
-
-~~~ ALU (arithmetic logic unit) ~~~
-Runs arithmetic or logical operations on data (using an opcode, that selects the type of operation)
-
-~~~ MAR (memory address register) ~~~
-A register that stores the address of the memory location (address) from which data is written to/read from (acts like an interface between the CPU and memory)
-
-~~~ MBR (memory buffer register) ~~~
-A temporary storage register that holds data being transferred to/from memory (acts like a buffer between the CPU and memory)
-
-~~~ IR (instruction register) ~~~
-A register that holds the current instruction being executed (holds the instruction until it's decoded and executed)
-
-
-
-~~~ Fetch Phase ~~~
-1) Address Transfer - The address for the instruction, held in the PC, is copied into the MAR
-
-2) Memory Read Command - The CU issues a read command to the memory, instructing it to retrieve the data at the address specified by the MAR
-
-3) Data Retrieval - The retrieved instruction is placed into the MBR
-
-4) Instruction Transfer - Finally, the instruction from the MBR is transferred to the IR for decoding (PC is also generally incremented)
-
-
-
-~~~ Decode Phase ~~~
-1) Opcode Analysis - The CU analyzes the opcode of the instruction stored in the IR to determine what operation needs to be performed
-
-2) Operand Identification - The instruction is broken down into its components, identifying which registers or constants are needed for execution
-
-3) Control Signal Generation - The CU sends control signals to fetch any necessary constants from memory (i.e. loading additional operands)
-
-
-
-~~~ Execute Phase ~~~
-1) ALU Operation - Once all necessary values are available, they are sent to the ALU along with the opcode indicating what operation should be performed (e.g., addition)
-
-2) Result Handling - Operation output is sent back to the designated register as specified by the instruction (either via direct transfer or MBR/MAR if interfacing with memory)
-
-3) Storage of Result - If needed, results can be stored back into RAM or another memory location based on further instructions or as part of subsequent operations
+DECODE:  
+     31       20 19       15 14       12 11      7 6           0
+         imm         rs1         000         rd       0010011
 */
 
 module top_tb;
-	reg reset;
+    // CLK
+    reg reset;
     reg clk_enable;
     reg lsi_enable;
     wire clk;
     wire lsi_clk;
     wire wdt_clk;
 
+    // FLASH
     reg we;
     reg re;
-    reg [11:0] addr;
+    reg [23:0] addr;
     reg [7:0] in;
     wire [7:0] out;
 
-	reg [7:0] A, B;
-    reg [3:0] opcode;
+    // PC
+    reg [1:0] pc_control;
+    wire [23:0] pc_out;
+    reg [31:0] instruction; // EXTERNAL
+
+    // CU
+    reg [6:0] cu_op;
+    wire [3:0] alu_op;
+    wire mem_read;
+    wire mem_write;
+
+    // ALU
+    reg [7:0] A;
+    reg [7:0] B;
     wire [7:0] result;
     wire carry_out;
-	
+
+    // MBR
+    reg [7:0] MBR;
+
+	// REGISTERS
+	reg [11:0] imm;
+	reg [4:0] rs1;
+	reg [4:0] rd;
+    
     clock clk_inst (
         .reset(reset),
         .clk_enable(clk_enable),
@@ -83,7 +63,7 @@ module top_tb;
         .wdt_clk(wdt_clk)
     );
 
-    memory mem_inst (
+    flash flash_inst (
         .clk(clk),
         .we(we),
         .re(re),
@@ -91,40 +71,182 @@ module top_tb;
         .in(in),
         .out(out)
     );
+ 
+    program_counter pc_inst (
+        .clk(clk),
+        .reset(reset),
+        .pc_control(pc_control),
+        .pc_out(pc_out)
+    );
 
-	alu alu_inst (
+    control_unit cu_inst (
+        .cu_op(cu_op),
+        .alu_op(alu_op),
+        .mem_read(mem_read),
+        .mem_write(mem_write)
+    );
+
+    alu alu_inst (
         .A(A),
         .B(B),
-        .opcode(opcode),
+        .alu_op(alu_op),
         .result(result),
         .carry_out(carry_out)
     );
 
-    initial begin
-		// clock
-        reset = 1;
-        clk_enable = 0;
-        lsi_enable = 0;
+    task write_to_flash;
+        input [31:0] instruction;
+        input [23:0] start_addr;
 
-		// memory
-		addr = 12'bz;
-		in = 8'bz;
-        we = 0;
-        re = 0;
+        begin
+            we = 1;
+            re = 0;
 
-		// alu
-		A = 8'bz;
-		B = 8'bz;
-		opcode = 4'bz;
+            @(posedge clk);
+            addr = start_addr;
+            in = instruction[7:0];
 
-        #1
-		reset = 0;
-        
-        #10
-		clk_enable = 1;
+            @(posedge clk);
+            addr = start_addr + 1;
+            in = instruction[15:8];
+
+            @(posedge clk);
+            addr = start_addr + 2;
+            in = instruction[23:16];
+
+            @(posedge clk);
+            addr = start_addr + 3;
+            in = instruction[31:24];
+
+            @(posedge clk);
+            we = 0;
+			re = 0;
+            addr = 24'bx;
+            in = 8'bx;
+        end
+    endtask
+
+	task inc_pc;
+		begin
+			@(posedge clk);
+	    	pc_control = 2'b01;
+	    	@(posedge clk);
+	    	pc_control = 2'b00;
+		end
+	endtask
+	
+	initial begin
+	    reset = 1;
+	    clk_enable = 0;
+	    lsi_enable = 0;
+	    instruction = 32'b0;
+	    A = 8'bx;
+	    B = 8'bx;
+	    #1
+	    reset = 0;
+	    clk_enable = 1;
+	    
+	    // WRITE INSTRUCTION/DATA STAGE
+	    // INSTRUCTION
+	    write_to_flash(32'h00a28213, 24'h000000);
+	
+	    // DATA
+	    @(posedge clk);
+	    we = 1;
+	    re = 0;
+	
+	    @(posedge clk);
+	    addr = 24'h000005;
+	    in = 8'b00010000;
+	
+	    @(posedge clk);
+	    we = 0;
+	    re = 0;
+	    addr = 24'bx;
+	    in = 8'bx;
+	
+	    // READ INSTRUCTION STAGE
+	    @(posedge clk);
+	    re = 1;
+	    addr = pc_out;
+	    pc_control = 2'b00;
+	
+	    repeat(3) @(posedge clk);
+	    MBR = out;
+	    instruction[7:0] = MBR;
+	
+	    inc_pc();
+	
+	    // ---- //
+	
+	    @(posedge clk);
+	    addr = pc_out;
+	
+	    repeat(3) @(posedge clk);
+	    MBR = out; 
+	    instruction[15:8] = MBR;
+	
+	    inc_pc();
+	
+	    // ---- //
+	
+	    @(posedge clk);
+	    addr = pc_out;
+	
+	    repeat(3) @(posedge clk);
+	    MBR = out;
+	    instruction[23:16] = MBR;
+	
+	    inc_pc();
+	
+	    // ---- //
+	
+	    @(posedge clk);
+	    addr = pc_out;
+	
+	    repeat(3) @(posedge clk);
+	    MBR = out;
+	    instruction[31:24] = MBR;
+	
+	    @(posedge clk);
+	    re = 0;
+	    pc_control = 2'b00;
+	
+	    @(posedge clk);
+	    addr = 24'bx;
+	    in = 8'bx;
+	
+	    imm = instruction [31:20];
+	    rs1 = instruction [19:15];
+	    rd = instruction [11:7];
+	
+	    @(posedge clk);
+	    re = 1;
+	    addr = {19'b0, rs1};
+	
+	    repeat(3) @(posedge clk);
+	    MBR = out;
+	    re = 0;
+	
+	    @(posedge clk);
+	    A = MBR;
+	    B = imm [7:0];
+	
+	    @(posedge clk);
+	    cu_op = instruction [6:0];
+	
+		@(posedge clk);
+		we = 1;
+		re = 0;
+		addr = {11'b0, rd};
+		in = result;
+
+		@(posedge clk);
+		we = 0;
+		re = 0;
 
 		#10
-
-        $finish;
-    end
+	
+	    $finish;
+	end
 endmodule

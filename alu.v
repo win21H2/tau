@@ -22,8 +22,8 @@ NO OPERATION
 */
 
 module alu (
-    input [7:0] A, B,
-    input [3:0] opcode,
+    input wire [7:0] A, B,
+    input wire [3:0] alu_op,
     output reg [7:0] result,
     output reg carry_out
 );
@@ -31,7 +31,7 @@ module alu (
     always @(*) begin
         carry_out = 1'b0;
 
-        case(opcode)
+        case(alu_op)
             4'b0000: {carry_out, result} = A + B;
             4'b0001: {carry_out, result} = A - B;
 			4'b0010: result = A + 1;
@@ -45,7 +45,7 @@ module alu (
             4'b1110: result = A << 1;
             4'b0111: result = A >> 1;
             
-            default: result = 8'bz;
+            default: result = 8'bx;
         endcase
     end
 endmodule

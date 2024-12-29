@@ -16,10 +16,8 @@ module load_tb;
 
     // PC
     reg [1:0] pc_control;
-    reg [23:0] branch_addr;
-    reg [23:0] jump_addr;
     wire [23:0] pc_out;
-    reg [31:0] instruction;
+    reg [31:0] instruction; // EXTERNAL
 
     // CU
     reg [3:0] opcode;
@@ -29,6 +27,10 @@ module load_tb;
     wire mem_read;
     wire mem_write;
     wire reg_write;
+
+    // MBR and MAR
+    reg [7:0] MBR;
+    reg [23:0] MAR;
     
     clock clk_inst (
         .reset(reset),
@@ -52,8 +54,6 @@ module load_tb;
         .clk(clk),
         .reset(reset),
         .pc_control(pc_control),
-        .branch_addr(branch_addr),
-        .jump_addr(jump_addr),
         .pc_out(pc_out)
     );
 
@@ -67,6 +67,37 @@ module load_tb;
         .reg_write(reg_write)
     );
 
+    task write_to_flash;
+        input [31:0] instruction;
+        input [23:0] start_addr;
+
+        begin
+            we = 1;
+            re = 0;
+
+            @(posedge clk);
+            addr = start_addr;
+            in = instruction[7:0];
+
+            @(posedge clk);
+            addr = start_addr + 1;
+            in = instruction[15:8];
+
+            @(posedge clk);
+            addr = start_addr + 2;
+            in = instruction[23:16];
+
+            @(posedge clk);
+            addr = start_addr + 3;
+            in = instruction[31:24];
+
+            @(posedge clk);
+            we = 0;
+            addr = 24'bx;
+            in = 8'bx;
+        end
+    endtask
+
     initial begin
         reset = 1;
         clk_enable = 0;
@@ -78,76 +109,83 @@ module load_tb;
         reset = 0;
         clk_enable = 1;
         
-        // WRITE INST TO FLASH [LITTLE ENDIAN]
-        @(posedge clk);
-        we = 1;
-        re = 0;
-        addr = 24'h000000;
-        in = 8'h93;
-        
-        @(posedge clk);
-        addr = 24'h000001;
-        in = 8'h00;
-        
-        @(posedge clk);
-        addr = 24'h000002;
-        in = 8'hA1;
-        
-        @(posedge clk);
-        addr = 24'h000003;
-        in = 8'h00;
-        
-        @(posedge clk);
-        we = 0;
-        re = 0;
-        addr = 24'bx;
-        in = 8'bx;
+		write_to_flash(32'h01008113, 24'h000000);
+		// write_to_flash(32'h02008113, 24'h000003);
+		/* INST:
+			addi x1, x2, 10
+		*/
+		/* HEX:
+			0x00a10093
+		*/
+		/* BINARY:
+			0000 0000 1010 0001 0000 0000 1001 0011
+		*/
+		/* DECODE:  
+			31       20 19       15 14       12 11      7 6           0
+    			imm         rs1         000         rd       0010011
 
-        // READ INST FROM FLASH [LITTLE ENDIAN]
+			0000 0000 1010 | 0001 0 | 000 | 0000 1 | 001 0011
+		*/
+
+        // READ INST #1 FROM FLASH [LITTLE ENDIAN]
         @(posedge clk);
         re = 1;
         addr = pc_out;
         pc_control = 2'b00;
 
         repeat(3) @(posedge clk);
-        instruction[7:0] = out;
+        MBR = out;
+        instruction [7:0] = MBR;
 
         @(posedge clk);
         pc_control = 2'b01;
         @(posedge clk);
         pc_control = 2'b00;
 
+		// ---- //
+
         @(posedge clk);
         addr = pc_out;
 
         repeat(3) @(posedge clk);
-        instruction[15:8] = out;
+        MBR = out;
+        instruction [15:8] = MBR;
 
         @(posedge clk);
         pc_control = 2'b01;
         @(posedge clk);
         pc_control = 2'b00;
 
+		// ---- //
+
         @(posedge clk);
         addr = pc_out;
 
         repeat(3) @(posedge clk);
-        instruction[23:16] = out;
+        MBR = out;
+        instruction [23:16] = MBR;
 
         @(posedge clk);
         pc_control = 2'b01;
         @(posedge clk);
         pc_control = 2'b00;
 
+		// ---- //
+
         @(posedge clk);
         addr = pc_out;
 
         repeat(3) @(posedge clk);
-        instruction[31:24] = out;
+        MBR = out;
+        instruction [31:24] = MBR;
 
         @(posedge clk);
         re = 0;
         pc_control = 2'b00;
+
+		@(posedge clk);
+        addr = 24'bx;
+        in = 8'bx;
 
         $finish;
     end
