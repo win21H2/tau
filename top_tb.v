@@ -1,18 +1,3 @@
-/*
-INST:
-	addi x4, x5, 10 (add const of 10 to x5 and store to x4)
-
-HEX:
-     0x00a28213
-
-BINARY:
-     0000 0000 1010 0010 1000 0010 0001 0011
-
-DECODE:  
-     31       20 19       15 14       12 11      7 6           0
-         imm         rs1         000         rd       0010011
-*/
-
 module top_tb;
     // CLK
     reg reset;
@@ -37,22 +22,16 @@ module top_tb;
     // CU
     reg [6:0] cu_op;
     wire [3:0] alu_op;
-    wire mem_read;
-    wire mem_write;
+    wire alu_src;
+    wire reg_write;
+	wire mem_read;
+	wire mem_write;
 
     // ALU
     reg [7:0] A;
     reg [7:0] B;
     wire [7:0] result;
     wire carry_out;
-
-    // MBR
-    reg [7:0] MBR;
-
-	// REGISTERS
-	reg [11:0] imm;
-	reg [4:0] rs1;
-	reg [4:0] rd;
     
     clock clk_inst (
         .reset(reset),
@@ -81,9 +60,13 @@ module top_tb;
 
     control_unit cu_inst (
         .cu_op(cu_op),
+        .funct3(instruction[14:12]),
+        .funct7(instruction[31:25]),
         .alu_op(alu_op),
-        .mem_read(mem_read),
-        .mem_write(mem_write)
+        .alu_src(alu_src),
+        .reg_write(reg_write),
+		.mem_read(mem_read),
+		.mem_write(mem_write)
     );
 
     alu alu_inst (
@@ -94,7 +77,7 @@ module top_tb;
         .carry_out(carry_out)
     );
 
-    task write_to_flash;
+    task write_instruction_to_flash;
         input [31:0] instruction;
         input [23:0] start_addr;
 
@@ -120,133 +103,140 @@ module top_tb;
 
             @(posedge clk);
             we = 0;
-			re = 0;
+            re = 0;
             addr = 24'bx;
             in = 8'bx;
         end
     endtask
 
-	task inc_pc;
-		begin
-			@(posedge clk);
-	    	pc_control = 2'b01;
-	    	@(posedge clk);
-	    	pc_control = 2'b00;
-		end
-	endtask
-	
-	initial begin
-	    reset = 1;
-	    clk_enable = 0;
-	    lsi_enable = 0;
-	    instruction = 32'b0;
-	    A = 8'bx;
-	    B = 8'bx;
-	    #1
-	    reset = 0;
-	    clk_enable = 1;
-	    
-	    // WRITE INSTRUCTION/DATA STAGE
-	    // INSTRUCTION
-	    write_to_flash(32'h00a28213, 24'h000000);
-	
-	    // DATA
-	    @(posedge clk);
-	    we = 1;
-	    re = 0;
-	
-	    @(posedge clk);
-	    addr = 24'h000005;
-	    in = 8'b00010000;
-	
-	    @(posedge clk);
-	    we = 0;
-	    re = 0;
-	    addr = 24'bx;
-	    in = 8'bx;
-	
-	    // READ INSTRUCTION STAGE
-	    @(posedge clk);
-	    re = 1;
-	    addr = pc_out;
-	    pc_control = 2'b00;
-	
-	    repeat(3) @(posedge clk);
-	    MBR = out;
-	    instruction[7:0] = MBR;
-	
-	    inc_pc();
-	
-	    // ---- //
-	
-	    @(posedge clk);
-	    addr = pc_out;
-	
-	    repeat(3) @(posedge clk);
-	    MBR = out; 
-	    instruction[15:8] = MBR;
-	
-	    inc_pc();
-	
-	    // ---- //
-	
-	    @(posedge clk);
-	    addr = pc_out;
-	
-	    repeat(3) @(posedge clk);
-	    MBR = out;
-	    instruction[23:16] = MBR;
-	
-	    inc_pc();
-	
-	    // ---- //
-	
-	    @(posedge clk);
-	    addr = pc_out;
-	
-	    repeat(3) @(posedge clk);
-	    MBR = out;
-	    instruction[31:24] = MBR;
-	
-	    @(posedge clk);
-	    re = 0;
-	    pc_control = 2'b00;
-	
-	    @(posedge clk);
-	    addr = 24'bx;
-	    in = 8'bx;
-	
-	    imm = instruction [31:20];
-	    rs1 = instruction [19:15];
-	    rd = instruction [11:7];
-	
-	    @(posedge clk);
-	    re = 1;
-	    addr = {19'b0, rs1};
-	
-	    repeat(3) @(posedge clk);
-	    MBR = out;
-	    re = 0;
-	
-	    @(posedge clk);
-	    A = MBR;
-	    B = imm [7:0];
-	
-	    @(posedge clk);
-	    cu_op = instruction [6:0];
-	
-		@(posedge clk);
-		we = 1;
-		re = 0;
-		addr = {11'b0, rd};
-		in = result;
+    task write_byte_to_flash;
+        input [7:0] byte_data;
+        input [23:0] address;
+        
+        begin
+            we = 1;
+            re = 0;
+
+            @(posedge clk);
+            addr = address;
+            in = byte_data;
+
+            @(posedge clk);
+            we = 0;
+            re = 0;
+            addr = 24'bx;
+            in = 8'bx;
+        end
+    endtask
+
+    task inc_pc;
+        begin
+            @(posedge clk);
+            pc_control = 2'b01;
+            @(posedge clk);
+            pc_control = 2'b00;
+        end
+    endtask
+    
+    initial begin
+        reset = 1;
+        clk_enable = 0;
+        lsi_enable = 0;
+        instruction = 32'b0;
+        A = 8'bx;
+        B = 8'bx;
+        #1
+        reset = 0;
+        clk_enable = 1;
+        
+// ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~
+
+/*
+INSTRUCTIONS
+lb t0, 1(x0)
+HEX CODE [0x00100283] @ ADDRESS STARTING 0x0000004
+
+lb t1, 2(x0)
+HEX CODE [0x00200303] @ ADDRESS STARTING 0x0000008
+
+add t2, t0, t1
+HEX CODE [0x006283b3] @ ADDRESS STARTING 0x000000c
+
+sb t2, 3(x0)
+HEX CODE [0x007001a3] @ ADDRESS STARTING 0x0000010
+
+
+DATA
+HEX CODE [10] @ ADDRESS 0x0000001
+HEX CODE [10] @ ADDRESS 0x0000002
+*/
+
+        // INSTRUCTIONS
+        write_instruction_to_flash(32'h00100283, 24'h000000); // lb t0, 1(x0)
+        write_instruction_to_flash(32'h00200303, 24'h000004); // lb t1, 2(x0)
+        write_instruction_to_flash(32'h006283b3, 24'h000008); // add t2, t0, t1
+        write_instruction_to_flash(32'h007001a3, 24'h00000c); // sb t2, 3(x0)
+
+        // DATA
+        write_byte_to_flash(8'h10, 24'h000020);
+        write_byte_to_flash(8'h14, 24'h000021);
+    
+// ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~
+		repeat(3) @(posedge clk);
+// ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~
 
 		@(posedge clk);
-		we = 0;
-		re = 0;
-
-		#10
+		re = 1;
+		addr = pc_out;
+		pc_control = 2'b00;
 	
-	    $finish;
-	end
+		repeat(3) @(posedge clk);
+		instruction [7:0] = out;
+
+		inc_pc();
+
+		// ~~~ //		
+
+		@(posedge clk);
+		addr = pc_out;
+	
+		repeat(3) @(posedge clk);
+		instruction [15:8] = out;
+
+		inc_pc();
+
+		// ~~~ //
+
+		@(posedge clk);
+		addr = pc_out;
+	
+		repeat(3) @(posedge clk);
+		instruction [23:16] = out;
+
+		inc_pc();
+
+		// ~~~ //
+
+		@(posedge clk);
+		addr = pc_out;
+	
+		repeat(3) @(posedge clk);
+		instruction [31:24] = out;
+
+		// ~~~ //
+		
+		repeat(3) @(posedge clk);
+		re = 0;
+		pc_control = 2'b00;
+		addr = 24'bx;
+		in = 8'bx;
+
+		repeat(3) @(posedge clk);
+		
+// ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~
+    
+        #10
+    
+        $finish;
+    end
 endmodule
