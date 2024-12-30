@@ -17,22 +17,24 @@ module top_tb;
     // PC
     reg [1:0] pc_control;
     wire [23:0] pc_out;
-    reg [31:0] instruction; // EXTERNAL
+    reg [31:0] ir;
 
     // CU
     reg [6:0] cu_op;
+    reg [2:0] funct3;
+    reg [6:0] funct7;
     wire [3:0] alu_op;
-    wire alu_src;
-    wire reg_write;
-	wire mem_read;
-	wire mem_write;
+    wire [31:0] imm;
+    wire [4:0] rs1;
+    wire [4:0] rs2;
+    wire [4:0] rd;
 
     // ALU
     reg [7:0] A;
     reg [7:0] B;
     wire [7:0] result;
     wire carry_out;
-    
+
     clock clk_inst (
         .reset(reset),
         .clk_enable(clk_enable),
@@ -50,7 +52,7 @@ module top_tb;
         .in(in),
         .out(out)
     );
- 
+
     program_counter pc_inst (
         .clk(clk),
         .reset(reset),
@@ -60,13 +62,14 @@ module top_tb;
 
     control_unit cu_inst (
         .cu_op(cu_op),
-        .funct3(instruction[14:12]),
-        .funct7(instruction[31:25]),
+        .funct3(ir[14:12]),
+        .funct7(ir[31:25]),
+        .ir(ir),
         .alu_op(alu_op),
-        .alu_src(alu_src),
-        .reg_write(reg_write),
-		.mem_read(mem_read),
-		.mem_write(mem_write)
+        .imm(imm),
+        .rs1(rs1),
+        .rs2(rs2),
+        .rd(rd)
     );
 
     alu alu_inst (
@@ -78,7 +81,7 @@ module top_tb;
     );
 
     task write_instruction_to_flash;
-        input [31:0] instruction;
+        input [31:0] ir;
         input [23:0] start_addr;
 
         begin
@@ -87,19 +90,19 @@ module top_tb;
 
             @(posedge clk);
             addr = start_addr;
-            in = instruction[7:0];
+            in = ir[7:0];
 
             @(posedge clk);
             addr = start_addr + 1;
-            in = instruction[15:8];
+            in = ir[15:8];
 
             @(posedge clk);
             addr = start_addr + 2;
-            in = instruction[23:16];
+            in = ir[23:16];
 
             @(posedge clk);
             addr = start_addr + 3;
-            in = instruction[31:24];
+            in = ir[31:24];
 
             @(posedge clk);
             we = 0;
@@ -112,7 +115,7 @@ module top_tb;
     task write_byte_to_flash;
         input [7:0] byte_data;
         input [23:0] address;
-        
+
         begin
             we = 1;
             re = 0;
@@ -137,106 +140,87 @@ module top_tb;
             pc_control = 2'b00;
         end
     endtask
-    
+
     initial begin
         reset = 1;
         clk_enable = 0;
         lsi_enable = 0;
-        instruction = 32'b0;
+        ir = 32'b0;
         A = 8'bx;
         B = 8'bx;
         #1
         reset = 0;
         clk_enable = 1;
-        
-// ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~
 
-/*
-INSTRUCTIONS
-lb t0, 1(x0)
-HEX CODE [0x00100283] @ ADDRESS STARTING 0x0000004
-
-lb t1, 2(x0)
-HEX CODE [0x00200303] @ ADDRESS STARTING 0x0000008
-
-add t2, t0, t1
-HEX CODE [0x006283b3] @ ADDRESS STARTING 0x000000c
-
-sb t2, 3(x0)
-HEX CODE [0x007001a3] @ ADDRESS STARTING 0x0000010
-
-
-DATA
-HEX CODE [10] @ ADDRESS 0x0000001
-HEX CODE [10] @ ADDRESS 0x0000002
-*/
-
-        // INSTRUCTIONS
-        write_instruction_to_flash(32'h00100283, 24'h000000); // lb t0, 1(x0)
-        write_instruction_to_flash(32'h00200303, 24'h000004); // lb t1, 2(x0)
+        // ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~
+        // INSTRUCTIONS (note: offset is a decimal number offset - so 32 in decimal is address 20 in hex in the first load instruction)
+        write_instruction_to_flash(32'h02000283, 24'h000000); // lb t0, 32(x0)
+        write_instruction_to_flash(32'h01500303, 24'h000004); // lb t1, 21(x0)
         write_instruction_to_flash(32'h006283b3, 24'h000008); // add t2, t0, t1
-        write_instruction_to_flash(32'h007001a3, 24'h00000c); // sb t2, 3(x0)
+        write_instruction_to_flash(32'h016001a3, 24'h00000c); // sb t2, 22(x0)
 
         // DATA
-        write_byte_to_flash(8'h10, 24'h000020);
-        write_byte_to_flash(8'h14, 24'h000021);
-    
-// ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~
-		repeat(3) @(posedge clk);
-// ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~
+        write_byte_to_flash(8'h11, 24'h000020);
+        write_byte_to_flash(8'h11, 24'h000021);
 
-		@(posedge clk);
-		re = 1;
-		addr = pc_out;
-		pc_control = 2'b00;
-	
-		repeat(3) @(posedge clk);
-		instruction [7:0] = out;
+        // ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~ WRITE STAGE ~~~
+        repeat(3) @(posedge clk);
+        // ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~
+        @(posedge clk);
+        re = 1;
+        addr = pc_out;
+        pc_control = 2'b00;
 
-		inc_pc();
+        repeat(3) @(posedge clk);
+        ir[7:0] = out;
 
-		// ~~~ //		
+        inc_pc();
 
-		@(posedge clk);
-		addr = pc_out;
-	
-		repeat(3) @(posedge clk);
-		instruction [15:8] = out;
+        @(posedge clk);
+        addr = pc_out;
 
-		inc_pc();
+        repeat(3) @(posedge clk);
+        ir[15:8] = out;
 
-		// ~~~ //
+        inc_pc();
 
-		@(posedge clk);
-		addr = pc_out;
-	
-		repeat(3) @(posedge clk);
-		instruction [23:16] = out;
+        @(posedge clk);
+        addr = pc_out;
 
-		inc_pc();
+        repeat(3) @(posedge clk);
+        ir[23:16] = out;
 
-		// ~~~ //
+        inc_pc();
 
-		@(posedge clk);
-		addr = pc_out;
-	
-		repeat(3) @(posedge clk);
-		instruction [31:24] = out;
+        @(posedge clk);
+        addr = pc_out;
 
-		// ~~~ //
-		
-		repeat(3) @(posedge clk);
-		re = 0;
-		pc_control = 2'b00;
-		addr = 24'bx;
-		in = 8'bx;
+        repeat(3) @(posedge clk);
+        ir[31:24] = out;
 
-		repeat(3) @(posedge clk);
-		
-// ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~
-    
+        repeat(3) @(posedge clk);
+        re = 0;
+        we = 0;
+        pc_control = 2'b00;
+        addr = 24'bx;
+        in = 8'bx;
+
+        @(posedge clk);
+        cu_op = ir[6:0];
+        funct3 = ir[14:12];
+        funct7 = ir[31:25];
+
+        @(posedge clk);
+        re = 1;
+        we = 0;
+        @(posedge clk);
+        if (cu_op == 7'b0000011 && funct3 == 3'b000) begin
+            addr = imm;
+        end
+
+        // ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~
         #10
-    
+
         $finish;
     end
 endmodule
