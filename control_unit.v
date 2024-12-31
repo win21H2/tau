@@ -28,7 +28,7 @@ module control_unit (
             end
             7'b0010011: begin // I-type (Immediate)
                 rs1 = ir[19:15];
-                rs2 = 5'b0; // Not used
+                rs2 = 5'bx;
                 imm = {{20{ir[31]}}, ir[31:20]}; // Sign-extend immediate
                 rd = ir[11:7];
                 case(funct3)
@@ -41,7 +41,7 @@ module control_unit (
             end
             7'b0000011: begin // I-type (Load)
                 rs1 = ir[19:15];
-                rs2 = 5'b0; // Not used
+                rs2 = 5'bx;
                 imm = {{20{ir[31]}}, ir[31:20]}; // Sign-extend immediate
                 rd = ir[11:7];
                 case(funct3)

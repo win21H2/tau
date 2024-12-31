@@ -35,6 +35,12 @@ module top_tb;
     wire [7:0] result;
     wire carry_out;
 
+    // Register File
+    wire [31:0] rd1;
+    wire [31:0] rd2;
+    reg [31:0] wd;
+    reg reg_we;
+
     clock clk_inst (
         .reset(reset),
         .clk_enable(clk_enable),
@@ -78,6 +84,17 @@ module top_tb;
         .alu_op(alu_op),
         .result(result),
         .carry_out(carry_out)
+    );
+
+    register_file reg_file_inst (
+        .clk(clk),
+        .we(reg_we),
+        .rs1(rs1),
+        .rs2(rs2),
+        .rd(rd),
+        .wd(wd),
+        .rd1(rd1),
+        .rd2(rd2)
     );
 
     task write_instruction_to_flash;
@@ -148,6 +165,8 @@ module top_tb;
         ir = 32'b0;
         A = 8'bx;
         B = 8'bx;
+        reg_we = 0;
+        wd = 32'b0;
         #1
         reset = 0;
         clk_enable = 1;
@@ -215,8 +234,16 @@ module top_tb;
         we = 0;
         @(posedge clk);
         if (cu_op == 7'b0000011 && funct3 == 3'b000) begin
-            addr = imm;
+            addr = imm[23:0];
+            repeat(3) @(posedge clk);
+            wd = {24'b0, out};
+            reg_we = 1;
+            @(posedge clk);
+            reg_we = 0;
+			// TODO: push data to register x5 in the register file
         end
+		re = 0;
+		we = 0;
 
         // ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~ DEC/EXEC STAGE ~~~
         #10
