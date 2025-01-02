@@ -150,6 +150,52 @@ module top_tb;
         end
     endtask
 
+	task read_from_flash;
+	    input [23:0] start_addr;
+	    output [31:0] instruction;
+	    
+	    begin
+	        re = 1;
+	        we = 0;
+	        addr = start_addr;
+	        pc_control = 2'b00;
+	
+	        repeat(3) @(posedge clk);
+	        instruction[7:0] = out;
+	
+	        inc_pc();
+	
+	        @(posedge clk);
+	        addr = pc_out;
+	
+	        repeat(3) @(posedge clk);
+	        instruction[15:8] = out;
+	
+	        inc_pc();
+	
+	        @(posedge clk);
+	        addr = pc_out;
+	
+	        repeat(3) @(posedge clk);
+	        instruction[23:16] = out;
+	
+	        inc_pc();
+	
+	        @(posedge clk);
+	        addr = pc_out;
+	
+	        repeat(3) @(posedge clk);
+	        instruction[31:24] = out;
+	
+	        repeat(3) @(posedge clk);
+	        re = 0;
+	        we = 0;
+	        pc_control = 2'b00;
+	        addr = 24'bx;
+	        in = 8'bx;
+	    end
+	endtask
+
     task inc_pc;
         begin
             @(posedge clk);
@@ -201,44 +247,7 @@ module top_tb;
 
 		// ~|~|~ INSTRUCTION #1 ~|~|~ INSTRUCTION #1 ~|~|~ INSTRUCTION #1 ~|~|~ INSTRUCTION #1 ~|~|~
         @(posedge clk);
-        re = 1;
-		we = 0;
-        addr = pc_out;
-        pc_control = 2'b00;
-
-        repeat(3) @(posedge clk);
-        ir[7:0] = out;
-
-        inc_pc();
-
-        @(posedge clk);
-        addr = pc_out;
-
-        repeat(3) @(posedge clk);
-        ir[15:8] = out;
-
-        inc_pc();
-
-        @(posedge clk);
-        addr = pc_out;
-
-        repeat(3) @(posedge clk);
-        ir[23:16] = out;
-
-        inc_pc();
-
-        @(posedge clk);
-        addr = pc_out;
-
-        repeat(3) @(posedge clk);
-        ir[31:24] = out;
-
-        repeat(3) @(posedge clk);
-        re = 0;
-        we = 0;
-        pc_control = 2'b00;
-        addr = 24'bx;
-        in = 8'bx;
+        read_from_flash(pc_out, ir);
 
         @(posedge clk);
         cu_op = ir[6:0];
@@ -266,44 +275,7 @@ module top_tb;
 		inc_pc();
 		
 		@(posedge clk);
-        re = 1;
-		we = 0;
-        addr = pc_out;
-        pc_control = 2'b00;
-
-        repeat(3) @(posedge clk);
-        ir[7:0] = out;
-
-        inc_pc();
-
-        @(posedge clk);
-        addr = pc_out;
-
-        repeat(3) @(posedge clk);
-        ir[15:8] = out;
-
-        inc_pc();
-
-        @(posedge clk);
-        addr = pc_out;
-
-        repeat(3) @(posedge clk);
-        ir[23:16] = out;
-
-        inc_pc();
-
-        @(posedge clk);
-        addr = pc_out;
-
-        repeat(3) @(posedge clk);
-        ir[31:24] = out;
-
-        repeat(3) @(posedge clk);
-        re = 0;
-        we = 0;
-        pc_control = 2'b00;
-        addr = 24'bx;
-        in = 8'bx;		
+        read_from_flash(pc_out, ir);
 
 		@(posedge clk);
         cu_op = ir[6:0];
@@ -331,44 +303,7 @@ module top_tb;
 		inc_pc();
 
 		@(posedge clk);
-		re = 1;
-		we = 0;
-		addr = pc_out;
-		pc_control = 2'b00;
-		
-		repeat(3) @(posedge clk);
-		ir[7:0] = out;
-		
-		inc_pc();
-		
-		@(posedge clk);
-		addr = pc_out;
-		
-		repeat(3) @(posedge clk);
-		ir[15:8] = out;
-		
-		inc_pc();
-		
-		@(posedge clk);
-		addr = pc_out;
-		
-		repeat(3) @(posedge clk);
-		ir[23:16] = out;
-		
-		inc_pc();
-		
-		@(posedge clk);
-		addr = pc_out;
-		
-		repeat(3) @(posedge clk);
-		ir[31:24] = out;
-		
-		repeat(3) @(posedge clk);
-		re = 0;
-		we = 0;
-		pc_control = 2'b00;
-		addr = 24'bx;
-		in = 8'bx;
+		read_from_flash(pc_out, ir);
 		
 		@(posedge clk);
 		cu_op = ir[6:0];
@@ -394,44 +329,7 @@ module top_tb;
 		inc_pc();
 		
 		@(posedge clk);
-		re = 1;
-		we = 0;
-		addr = pc_out;
-		pc_control = 2'b00;
-		
-		repeat(3) @(posedge clk);
-		ir[7:0] = out;
-		
-		inc_pc();
-		
-		@(posedge clk);
-		addr = pc_out;
-		
-		repeat(3) @(posedge clk);
-		ir[15:8] = out;
-		
-		inc_pc();
-		
-		@(posedge clk);
-		addr = pc_out;
-		
-		repeat(3) @(posedge clk);
-		ir[23:16] = out;
-		
-		inc_pc();
-		
-		@(posedge clk);
-		addr = pc_out;
-		
-		repeat(3) @(posedge clk);
-		ir[31:24] = out;
-		
-		repeat(3) @(posedge clk);
-		re = 0;
-		we = 0;
-		pc_control = 2'b00;
-		addr = 24'bx;
-		in = 8'bx;
+		read_from_flash(pc_out, ir);
 		
 		@(posedge clk);
 		cu_op = ir[6:0];

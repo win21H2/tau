@@ -11,9 +11,8 @@ module control_unit (
 );
 
     always @(*) begin
-
         case(cu_op)
-            7'b0110011: begin // R-type
+            7'b0110011: begin // R-TYPE
                 rs1 = ir[19:15];
                 rs2 = ir[24:20];
                 rd = ir[11:7];
@@ -23,26 +22,26 @@ module control_unit (
                     10'b0000000_100: alu_op = 4'b1100; // XOR
                     10'b0000000_110: alu_op = 4'b1001; // OR
                     10'b0000000_111: alu_op = 4'b1000; // AND
-                    default: alu_op = 4'b0110; // NO OPERATION
+                    default: alu_op = 4'b0110;
                 endcase
             end
-            7'b0010011: begin // I-type (Immediate)
+            7'b0010011: begin // I-TYPE
                 rs1 = ir[19:15];
                 rs2 = 5'bx;
-                imm = {{20{ir[31]}}, ir[31:20]}; // Sign-extend immediate
+                imm = {{20{ir[31]}}, ir[31:20]};
                 rd = ir[11:7];
                 case(funct3)
                     3'b000: alu_op = 4'b0000; // ADDI
                     3'b100: alu_op = 4'b1100; // XORI
                     3'b110: alu_op = 4'b1001; // ORI
                     3'b111: alu_op = 4'b1000; // ANDI
-                    default: alu_op = 4'b0110; // NO OPERATION
+                    default: alu_op = 4'b0110;
                 endcase
             end
-            7'b0000011: begin // I-type (Load)
+            7'b0000011: begin // I-TYPE
                 rs1 = ir[19:15];
                 rs2 = 5'bx;
-                imm = {{20{ir[31]}}, ir[31:20]}; // Sign-extend immediate
+                imm = {{20{ir[31]}}, ir[31:20]};
                 rd = ir[11:7];
                 case(funct3)
                     3'b000: alu_op = 4'b0110; // LB
@@ -50,18 +49,18 @@ module control_unit (
                     3'b010: alu_op = 4'b0110; // LW
                     3'b100: alu_op = 4'b0110; // LBU
                     3'b101: alu_op = 4'b0110; // LHU
-                    default: alu_op = 4'b0110; // NO OPERATION
+                    default: alu_op = 4'b0110;
                 endcase
             end
-            7'b0100011: begin // S-type (Store)
+            7'b0100011: begin // S-TYPE
                 rs1 = ir[19:15];
                 rs2 = ir[24:20];
-                imm = {{20{ir[31]}}, ir[31:25], ir[11:7]}; // Sign-extend immediate
+                imm = {{20{ir[31]}}, ir[31:25], ir[11:7]};
                 case(funct3)
                     3'b000: alu_op = 4'b0110; // SB
                     3'b001: alu_op = 4'b0110; // SH
                     3'b010: alu_op = 4'b0110; // SW
-                    default: alu_op = 4'b0110; // NO OPERATION
+                    default: alu_op = 4'b0110;
                 endcase
             end
             default: begin
@@ -73,5 +72,4 @@ module control_unit (
             end
         endcase
     end
-
 endmodule
